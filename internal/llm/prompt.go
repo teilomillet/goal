@@ -1,55 +1,65 @@
+// File: internal/llm/prompt.go
+
 package llm
 
 import (
 	"strings"
 )
 
-// Prompt represents a structured prompt for an LLM
+type PromptComponent struct {
+	Content string
+	Type    string
+}
+
 type Prompt struct {
-	Input      string
-	Output     string
-	Directives []string
+	Components []PromptComponent
 }
 
-// NewPrompt creates a new Prompt
-func NewPrompt(input string) Prompt {
-	return Prompt{
-		Input: input,
+func NewPrompt(input string) *Prompt {
+	return &Prompt{
+		Components: []PromptComponent{
+			{Content: input, Type: "instruction"},
+		},
 	}
 }
 
-// WithOutput adds an output specification to the Prompt
-func (p Prompt) WithOutput(output string) Prompt {
-	p.Output = output
+func (p *Prompt) WithContext(context string) *Prompt {
+	p.Components = append(p.Components, PromptComponent{Content: context, Type: "context"})
 	return p
 }
 
-// WithDirective adds a directive to the Prompt
-func (p Prompt) WithDirective(directive string) Prompt {
-	p.Directives = append(p.Directives, directive)
+func (p *Prompt) WithDirective(directive string) *Prompt {
+	p.Components = append(p.Components, PromptComponent{Content: directive, Type: "directive"})
 	return p
 }
 
-// String returns the formatted prompt as a string
-func (p Prompt) String() string {
-	var sb strings.Builder
+func (p *Prompt) WithOutput(output string) *Prompt {
+	p.Components = append(p.Components, PromptComponent{Content: output, Type: "output"})
+	return p
+}
 
-	if len(p.Directives) > 0 {
-		sb.WriteString("Directives:\n")
-		for _, d := range p.Directives {
-			sb.WriteString("- ")
-			sb.WriteString(d)
-			sb.WriteString("\n")
+func (p *Prompt) WithExample(example string) *Prompt {
+	p.Components = append(p.Components, PromptComponent{Content: example, Type: "example"})
+	return p
+}
+
+func (p *Prompt) String() string {
+	var parts []string
+	for _, component := range p.Components {
+		switch component.Type {
+		case "instruction":
+			parts = append(parts, component.Content)
+		case "context":
+			parts = append(parts, "Context: "+component.Content)
+		case "directive":
+			parts = append(parts, "Directive: "+component.Content)
+		case "output":
+			parts = append(parts, "Expected Output: "+component.Content)
+		case "example":
+			parts = append(parts, "Example: "+component.Content)
+		default:
+			parts = append(parts, component.Type+": "+component.Content)
 		}
-		sb.WriteString("\n")
 	}
-
-	sb.WriteString(p.Input)
-
-	if p.Output != "" {
-		sb.WriteString("\n\n")
-		sb.WriteString(p.Output)
-	}
-
-	return sb.String()
+	return strings.Join(parts, "\n\n")
 }

@@ -1,4 +1,4 @@
-// File: llm/compare.go
+// File: internal/llm/compare.go
 
 package llm
 
@@ -16,7 +16,7 @@ type ComparisonResult struct {
 	Error    error
 }
 
-func CompareProviders(ctx context.Context, prompt string, registry *ProviderRegistry, logger Logger, configs ...*Config) []ComparisonResult {
+func CompareProviders(ctx context.Context, prompt *Prompt, registry *ProviderRegistry, logger Logger, configs ...*Config) []ComparisonResult {
 	var results []ComparisonResult
 	var wg sync.WaitGroup
 	resultChan := make(chan ComparisonResult, len(configs))

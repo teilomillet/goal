@@ -30,9 +30,9 @@ func NewOllamaProvider(apiKey, model string) Provider {
 }
 
 // Implement LLM interface methods
-
-func (p *OllamaProvider) Generate(ctx context.Context, prompt string) (string, string, error) {
-	reqBody, err := p.PrepareRequest(prompt, p.options)
+func (p *OllamaProvider) Generate(ctx context.Context, prompt *Prompt) (string, string, error) {
+	promptString := prompt.String()
+	reqBody, err := p.PrepareRequest(promptString, p.options)
 	if err != nil {
 		return "", "", err
 	}
@@ -63,7 +63,7 @@ func (p *OllamaProvider) Generate(ctx context.Context, prompt string) (string, s
 		return "", "", err
 	}
 
-	return result, prompt, nil
+	return result, promptString, nil
 }
 
 func (p *OllamaProvider) SetOption(key string, value interface{}) {
@@ -134,4 +134,3 @@ func (p *OllamaProvider) ParseResponse(body []byte) (string, error) {
 
 	return fullResponse.String(), nil
 }
-

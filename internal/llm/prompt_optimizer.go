@@ -165,7 +165,7 @@ func (po *PromptOptimizer) assessPrompt(ctx context.Context, prompt *Prompt) (Op
     Assess the following prompt for the task: %s
 
     Full Prompt Structure:
-    %+v
+    %s
 
     Custom Metrics: %v
 
@@ -196,9 +196,9 @@ func (po *PromptOptimizer) assessPrompt(ctx context.Context, prompt *Prompt) (Op
     - Rank suggestions by their expected impact (20 being highest impact).
     - Use clear, jargon-free language in your assessment.
     - Double-check that your response is valid JSON before submitting.
-`, po.taskDesc, prompt, po.customMetrics, po.optimizationGoal))
+`, po.taskDesc, prompt.String(), po.customMetrics, po.optimizationGoal))
 
-	response, _, err := po.llm.Generate(ctx, assessPrompt.String())
+	response, _, err := po.llm.Generate(ctx, assessPrompt)
 	if err != nil {
 		return OptimizationEntry{}, fmt.Errorf("failed to assess prompt: %w", err)
 	}
@@ -305,7 +305,9 @@ func (po *PromptOptimizer) generateImprovedPrompt(ctx context.Context, prevEntry
 	improvePrompt := NewPrompt(fmt.Sprintf(`
     Based on the following assessment, generate an improved version of the entire prompt structure:
 
-    Previous prompt: %+v
+    Previous prompt:
+    %s
+
     Assessment: %+v
 
     Task Description: %s
@@ -346,11 +348,11 @@ func (po *PromptOptimizer) generateImprovedPrompt(ctx context.Context, prevEntry
     - Rate the expected impact of each version on a scale of 0 to 20.
 
     Double-check that your response is valid JSON before submitting.
-`, prevEntry.Prompt, prevEntry.Assessment, po.taskDesc, po.optimizationGoal))
+`, prevEntry.Prompt.String(), prevEntry.Assessment))
 
 	po.debugManager.LogPrompt(improvePrompt.String())
 
-	response, _, err := po.llm.Generate(ctx, improvePrompt.String())
+	response, _, err := po.llm.Generate(ctx, improvePrompt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate improved prompt: %w", err)
 	}
@@ -433,7 +435,7 @@ func (po *PromptOptimizer) OptimizePrompt(ctx context.Context, iterations int) (
 		}
 
 		currentPrompt = improvedPrompt
-		po.debugManager.LogResponse(fmt.Sprintf("Iteration %d complete. New prompt: %s", i+1, currentPrompt.Input))
+		po.debugManager.LogResponse(fmt.Sprintf("Iteration %d complete. New prompt: %s", i+1, currentPrompt.String()))
 	}
 
 	return bestPrompt, nil

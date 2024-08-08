@@ -105,11 +105,11 @@ func NewLLMWithMemory(baseLLM LLM, maxTokens int, model string, logger Logger) (
 	}, nil
 }
 
-func (l *LLMWithMemory) Generate(ctx context.Context, prompt string) (string, string, error) {
-	l.memory.Add("user", prompt)
+func (l *LLMWithMemory) Generate(ctx context.Context, prompt *Prompt) (string, string, error) {
+	l.memory.Add("user", prompt.String())
 	fullPrompt := l.memory.GetPrompt()
 
-	response, _, err := l.LLM.Generate(ctx, fullPrompt)
+	response, _, err := l.LLM.Generate(ctx, NewPrompt(fullPrompt))
 	if err != nil {
 		return "", fullPrompt, err
 	}

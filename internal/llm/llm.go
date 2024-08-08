@@ -13,7 +13,7 @@ import (
 
 // LLM interface defines the methods that our internal language model should implement
 type LLM interface {
-	Generate(ctx context.Context, prompt string) (response string, fullPrompt string, err error)
+	Generate(ctx context.Context, prompt *Prompt) (response string, fullPrompt string, err error)
 	SetOption(key string, value interface{})
 	SetDebugLevel(level LogLevel)
 	SetEndpoint(endpoint string)
@@ -89,16 +89,17 @@ func (l *LLMImpl) SetDebugLevel(level LogLevel) {
 	l.logger.SetLevel(level)
 }
 
-func (l *LLMImpl) Generate(ctx context.Context, prompt string) (string, string, error) {
+func (l *LLMImpl) Generate(ctx context.Context, prompt *Prompt) (string, string, error) {
+	promptString := prompt.String()
 	var result string
 	var lastErr error
 
 	for attempt := 0; attempt <= l.MaxRetries; attempt++ {
-		l.logger.Debug("Generating text", "provider", l.Provider.Name(), "prompt", prompt, "attempt", attempt+1)
+		l.logger.Debug("Generating text", "provider", l.Provider.Name(), "prompt", promptString, "attempt", attempt+1)
 
-		result, lastErr = l.attemptGenerate(ctx, prompt)
+		result, lastErr = l.attemptGenerate(ctx, prompt.String())
 		if lastErr == nil {
-			return result, prompt, nil
+			return result, promptString, nil
 		}
 
 		l.logger.Warn("Generation attempt failed", "error", lastErr, "attempt", attempt+1)
@@ -107,14 +108,14 @@ func (l *LLMImpl) Generate(ctx context.Context, prompt string) (string, string, 
 			l.logger.Debug("Retrying", "delay", l.RetryDelay)
 			select {
 			case <-ctx.Done():
-				return "", prompt, ctx.Err()
+				return "", promptString, ctx.Err()
 			case <-time.After(l.RetryDelay):
 				// Continue to next attempt
 			}
 		}
 	}
 
-	return "", prompt, fmt.Errorf("failed to generate after %d attempts: %w", l.MaxRetries+1, lastErr)
+	return "", promptString, fmt.Errorf("failed to generate after %d attempts: %w", l.MaxRetries+1, lastErr)
 }
 
 func (l *LLMImpl) attemptGenerate(ctx context.Context, prompt string) (string, error) {
