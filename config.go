@@ -100,11 +100,12 @@ var (
 	SetTfsZ          = config.SetTfsZ          // Sets tail-free sampling parameter
 
 	// Runtime configuration
-	SetTimeout      = config.SetTimeout      // Sets request timeout duration
-	SetMaxRetries   = config.SetMaxRetries   // Sets maximum retry attempts
-	SetRetryDelay   = config.SetRetryDelay   // Sets delay between retries
-	SetLogLevel     = config.SetLogLevel     // Sets logging verbosity
-	SetExtraHeaders = config.SetExtraHeaders // Sets additional HTTP headers
+	SetTimeout       = config.SetTimeout       // Sets request timeout duration
+	SetMaxRetries    = config.SetMaxRetries    // Sets maximum retry attempts
+	SetRetryDelay    = config.SetRetryDelay    // Sets base delay for retry backoff
+	SetMaxRetryDelay = config.SetMaxRetryDelay // Caps exponential retry backoff
+	SetLogLevel      = config.SetLogLevel      // Sets logging verbosity
+	SetExtraHeaders  = config.SetExtraHeaders  // Sets additional HTTP headers
 
 	// Feature toggles
 	SetEnableCaching = config.SetEnableCaching // Enables/disables response caching

@@ -63,6 +63,7 @@ type Config struct {
 	Timeout               time.Duration     `env:"LLM_TIMEOUT" envDefault:"30s"`
 	MaxRetries            int               `env:"LLM_MAX_RETRIES" envDefault:"3"`
 	RetryDelay            time.Duration     `env:"LLM_RETRY_DELAY" envDefault:"2s"`
+	MaxRetryDelay         time.Duration     `env:"LLM_MAX_RETRY_DELAY" envDefault:"60s"`
 	APIKeys               map[string]string `validate:"required,apikey"`
 	LogLevel              utils.LogLevel    `env:"LLM_LOG_LEVEL" envDefault:"WARN"`
 	Seed                  *int              `env:"LLM_SEED"`
@@ -147,16 +148,17 @@ type ConfigOption func(*Config)
 //	)
 func NewConfig() *Config {
 	return &Config{
-		Provider:     "openai",
-		Model:        "gpt-4o-mini",
-		Temperature:  0.7,
-		MaxTokens:    300,
-		Timeout:      30 * time.Second,
-		MaxRetries:   3,
-		RetryDelay:   2 * time.Second,
-		APIKeys:      make(map[string]string),
-		LogLevel:     utils.LogLevelWarn,
-		ExtraHeaders: make(map[string]string),
+		Provider:      "openai",
+		Model:         "gpt-4o-mini",
+		Temperature:   0.7,
+		MaxTokens:     300,
+		Timeout:       30 * time.Second,
+		MaxRetries:    3,
+		RetryDelay:    2 * time.Second,
+		MaxRetryDelay: 60 * time.Second,
+		APIKeys:       make(map[string]string),
+		LogLevel:      utils.LogLevelWarn,
+		ExtraHeaders:  make(map[string]string),
 	}
 }
 
@@ -242,10 +244,20 @@ func SetMaxRetries(maxRetries int) ConfigOption {
 	}
 }
 
-// SetRetryDelay sets the delay between retries.
+// SetRetryDelay sets the base delay for retry backoff. The retry loop grows
+// this exponentially per attempt (base × 2^attempt) with full jitter, so it is
+// the floor of the backoff curve rather than a fixed inter-attempt delay.
 func SetRetryDelay(retryDelay time.Duration) ConfigOption {
 	return func(c *Config) {
 		c.RetryDelay = retryDelay
+	}
+}
+
+// SetMaxRetryDelay caps the exponential backoff between retries. Zero means
+// uncapped growth from the base RetryDelay.
+func SetMaxRetryDelay(maxRetryDelay time.Duration) ConfigOption {
+	return func(c *Config) {
+		c.MaxRetryDelay = maxRetryDelay
 	}
 }
 

@@ -64,14 +64,15 @@ type LLM interface {
 // LLMImpl implements the LLM interface and manages interactions with specific providers.
 // It handles provider communication, error management, and logging.
 type LLMImpl struct {
-	Provider     providers.Provider     // The underlying LLM provider
-	Options      map[string]interface{} // Provider-specific options
-	optionsMutex sync.RWMutex           // Mutex to protect concurrent access to Options map
-	client       *http.Client           // HTTP client for API requests
-	logger       utils.Logger           // Logger for debugging and monitoring
-	config       *config.Config         // Configuration settings
-	MaxRetries   int                    // Maximum number of retry attempts
-	RetryDelay   time.Duration          // Delay between retry attempts
+	Provider      providers.Provider     // The underlying LLM provider
+	Options       map[string]interface{} // Provider-specific options
+	optionsMutex  sync.RWMutex           // Mutex to protect concurrent access to Options map
+	client        *http.Client           // HTTP client for API requests
+	logger        utils.Logger           // Logger for debugging and monitoring
+	config        *config.Config         // Configuration settings
+	MaxRetries    int                    // Maximum number of retry attempts
+	RetryDelay    time.Duration          // Base delay for exponential retry backoff
+	MaxRetryDelay time.Duration          // Cap on backoff growth (0 = uncapped)
 }
 
 // GenerateOption is a function type for configuring generation behavior.
@@ -111,13 +112,14 @@ func NewLLM(cfg *config.Config, logger utils.Logger, registry *providers.Provide
 	provider.SetDefaultOptions(cfg)
 
 	llmClient := &LLMImpl{
-		Provider:   provider,
-		client:     &http.Client{Timeout: cfg.Timeout},
-		logger:     logger,
-		config:     cfg,
-		MaxRetries: cfg.MaxRetries,
-		RetryDelay: cfg.RetryDelay,
-		Options:    make(map[string]interface{}),
+		Provider:      provider,
+		client:        &http.Client{Timeout: cfg.Timeout},
+		logger:        logger,
+		config:        cfg,
+		MaxRetries:    cfg.MaxRetries,
+		RetryDelay:    cfg.RetryDelay,
+		MaxRetryDelay: cfg.MaxRetryDelay,
+		Options:       make(map[string]interface{}),
 	}
 
 	return llmClient, nil
@@ -179,6 +181,7 @@ func (l *LLMImpl) Generate(ctx context.Context, prompt *Prompt, opts ...Generate
 	if prompt.SystemPrompt != "" {
 		l.SetOption("system_prompt", prompt.SystemPrompt)
 	}
+	var lastErr error
 	for attempt := 0; attempt <= l.MaxRetries; attempt++ {
 		l.logger.Debug("Generating text", "provider", l.Provider.Name(), "prompt", prompt.String(), "system_prompt", prompt.SystemPrompt, "attempt", attempt+1)
 		// Pass the entire Prompt struct to attemptGenerate
@@ -186,26 +189,19 @@ func (l *LLMImpl) Generate(ctx context.Context, prompt *Prompt, opts ...Generate
 		if err == nil {
 			return result, nil
 		}
-		l.logger.Warn("Generation attempt failed", "error", err, "attempt", attempt+1)
-		if attempt < l.MaxRetries {
-			l.logger.Debug("Retrying", "delay", l.RetryDelay)
-			if err := l.wait(ctx); err != nil {
-				return "", err
-			}
+		lastErr = err
+
+		proceed, ctxErr := l.shouldRetry(ctx, attempt, err)
+		if ctxErr != nil {
+			return "", ctxErr
+		}
+		if !proceed {
+			break
 		}
 	}
-	return "", fmt.Errorf("failed to generate after %d attempts", l.MaxRetries+1)
-}
-
-// wait implements a cancellable delay between retry attempts.
-// Returns context.Canceled if the context is cancelled during the wait.
-func (l *LLMImpl) wait(ctx context.Context) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(l.RetryDelay):
-		return nil
-	}
+	// Surface the underlying error rather than masking it with an attempt
+	// count — callers classify on the typed error to decide what to do next.
+	return "", lastErr
 }
 
 // attemptGenerate makes a single attempt to generate text using the provider.
@@ -292,7 +288,7 @@ func (l *LLMImpl) attemptGenerate(ctx context.Context, prompt *Prompt) (string, 
 	}
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return "", NewLLMError(ErrorTypeRequest, "failed to send request", err)
+		return "", classifyNetworkError(err)
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -304,8 +300,14 @@ func (l *LLMImpl) attemptGenerate(ctx context.Context, prompt *Prompt) (string, 
 	l.logger.Debug("Full API response", "body", string(body))
 
 	if resp.StatusCode != http.StatusOK {
-		l.logger.Error("API error", "provider", l.Provider.Name(), "status", resp.StatusCode, "body", string(body))
-		return "", NewLLMError(ErrorTypeAPI, fmt.Sprintf("API error: status code %d", resp.StatusCode), nil)
+		apiErr := classifyAPIError(resp.StatusCode, resp.Header, body)
+		if apiErr.Retryable {
+			// Transient — log quietly so a batch of retries does not flood.
+			l.logger.Debug("Retryable API error", "provider", l.Provider.Name(), "status", resp.StatusCode, "retry_after", apiErr.RetryAfter.String())
+		} else {
+			l.logger.Error("API error", "provider", l.Provider.Name(), "status", resp.StatusCode, "body", string(body))
+		}
+		return "", apiErr
 	}
 
 	// Extract and log caching information

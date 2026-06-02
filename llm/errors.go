@@ -2,6 +2,7 @@ package llm
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/teilomillet/gollm/utils"
 )
@@ -46,16 +47,41 @@ type LLMError struct {
 	Type    ErrorType // The category of the error
 	Message string    // A human-readable error message
 	Err     error     // The underlying error, if any
+
+	// Retryable reports whether retrying the request may succeed. It is set
+	// by the classifier for transient network failures and retryable HTTP
+	// statuses (408, 409, 429 rate limits, 5xx); permanent failures (most
+	// 4xx, exhausted quota) leave it false. The retry loop reads this field.
+	Retryable bool
+	// RetryAfter carries a server-provided minimum wait before the next
+	// attempt, parsed from Retry-After / retry-after-ms / rate-limit reset
+	// headers. Zero means "no server hint — use computed backoff".
+	RetryAfter time.Duration
+	// StatusCode is the HTTP status of an API error, or 0 when the error did
+	// not originate from an HTTP response.
+	StatusCode int
 }
 
 // LoggableFields returns a slice of interface{} containing error information
-// in a format suitable for structured logging.
+// in a format suitable for structured logging. The classification fields
+// (status_code, retryable, retry_after) are appended only when meaningful, so
+// non-HTTP errors do not emit noisy zero-values.
 func (e *LLMError) LoggableFields() []interface{} {
-	return []interface{}{
+	fields := []interface{}{
 		"error_type", e.TypeString(),
 		"message", e.Message,
 		"error", e.Err,
 	}
+	if e.StatusCode != 0 {
+		fields = append(fields, "status_code", e.StatusCode)
+	}
+	if e.Retryable {
+		fields = append(fields, "retryable", e.Retryable)
+	}
+	if e.RetryAfter > 0 {
+		fields = append(fields, "retry_after", e.RetryAfter.String())
+	}
+	return fields
 }
 
 // Error implements the error interface.
