@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,9 @@ func TestNeedsMaxCompletionTokens(t *testing.T) {
 		{"o-preview", true, "o-preview model should use max_completion_tokens"},
 		{"gpt-4o", true, "GPT-4o model should use max_completion_tokens"},
 		{"gpt-4o-mini", true, "GPT-4o mini model should use max_completion_tokens"},
+		{"gpt-5", true, "GPT-5 model should use max_completion_tokens"},
+		{"gpt-5-mini", true, "GPT-5 mini model should use max_completion_tokens"},
+		{"gpt-5.4-2026-03-05", true, "Dated GPT-5 model should use max_completion_tokens"},
 	}
 
 	for _, tc := range testCases {
@@ -37,4 +41,24 @@ func TestNeedsMaxCompletionTokens(t *testing.T) {
 			assert.Equal(t, tc.expectedResult, result, "needsMaxCompletionTokens returned unexpected result for model %s", tc.modelName)
 		})
 	}
+}
+
+// TestPrepareRequestGPT5UsesMaxCompletionTokens verifies that a gpt-5 request
+// carries max_completion_tokens and never max_tokens — the parameter gpt-5-class
+// models reject with HTTP 400.
+func TestPrepareRequestGPT5UsesMaxCompletionTokens(t *testing.T) {
+	provider, ok := NewOpenAIProvider("fake-api-key", "gpt-5.4-2026-03-05", nil).(*OpenAIProvider)
+	assert.True(t, ok, "Provider should be of type *OpenAIProvider")
+
+	body, err := provider.PrepareRequest("hello", map[string]interface{}{"max_tokens": 4096})
+	assert.NoError(t, err)
+
+	var req map[string]interface{}
+	assert.NoError(t, json.Unmarshal(body, &req))
+
+	_, hasMaxTokens := req["max_tokens"]
+	maxCompletion, hasMaxCompletion := req["max_completion_tokens"]
+	assert.False(t, hasMaxTokens, "gpt-5 request must not send max_tokens (OpenAI rejects it with HTTP 400)")
+	assert.True(t, hasMaxCompletion, "gpt-5 request must send max_completion_tokens instead")
+	assert.Equal(t, float64(4096), maxCompletion, "token budget must be preserved across the conversion")
 }

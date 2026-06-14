@@ -65,6 +65,12 @@ func (p *OpenAIProvider) needsMaxCompletionTokens() bool {
 		return true
 	}
 
+	// Check for gpt-5 and newer chat models, which require max_completion_tokens
+	// and reject max_tokens with HTTP 400 (e.g. gpt-5, gpt-5-mini, gpt-5.4-2026-03-05)
+	if strings.HasPrefix(p.model, "gpt-5") {
+		return true
+	}
+
 	return false
 }
 
