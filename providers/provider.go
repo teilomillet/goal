@@ -191,6 +191,7 @@ func NewProviderRegistry(providerNames ...string) *ProviderRegistry {
 		"lambda":        NewLambdaProvider,
 		"bedrock":       NewBedrockProvider,
 		"vllm":          NewVLLMProvider,
+		"atlascloud":    NewAtlasCloudProvider,
 	}
 
 	// Standard provider configurations
@@ -321,6 +322,16 @@ func NewProviderRegistry(providerNames ...string) *ProviderRegistry {
 			Endpoint:          "", // Configured by user for local vLLM server
 			AuthHeader:        "", // No authentication required
 			AuthPrefix:        "",
+			RequiredHeaders:   map[string]string{"Content-Type": "application/json"},
+			SupportsSchema:    true,
+			SupportsStreaming: true,
+		},
+		"atlascloud": {
+			Name:              "atlascloud",
+			Type:              TypeOpenAI,
+			Endpoint:          "https://api.atlascloud.ai/v1/chat/completions",
+			AuthHeader:        "Authorization",
+			AuthPrefix:        "Bearer ",
 			RequiredHeaders:   map[string]string{"Content-Type": "application/json"},
 			SupportsSchema:    true,
 			SupportsStreaming: true,

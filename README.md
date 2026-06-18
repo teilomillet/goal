@@ -74,6 +74,7 @@
   - Prompt caching
   - Reasoning tokens
   - Provider routing preferences
+- **Atlas Cloud**: OpenAI-compatible API with access to 300+ frontier models (DeepSeek, Qwen, Claude, GPT, Gemini, and more). Set `ATLASCLOUD_API_KEY` to use.
 
 ## Real-World Applications
 
