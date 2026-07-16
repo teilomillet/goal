@@ -29,6 +29,10 @@ func TestProviderRegistration(t *testing.T) {
 		"lmstudio",     // LM Studio local server
 		"lambda",       // Lambda Labs
 		"bedrock",      // AWS Bedrock
+		"minimax",
+		"minimax-cn",
+		"minimax-messages",
+		"minimax-messages-cn",
 	}
 
 	registry := GetDefaultRegistry()
@@ -62,6 +66,10 @@ func TestNewProviderRegistryContainsKnownProviders(t *testing.T) {
 		"openrouter",
 		"lambda",
 		"bedrock",
+		"minimax",
+		"minimax-cn",
+		"minimax-messages",
+		"minimax-messages-cn",
 	}
 
 	registry := NewProviderRegistry()
@@ -113,6 +121,10 @@ func TestProviderConfigsExist(t *testing.T) {
 		"openrouter",
 		"lambda",
 		"bedrock",
+		"minimax",
+		"minimax-cn",
+		"minimax-messages",
+		"minimax-messages-cn",
 	}
 
 	registry := GetDefaultRegistry()

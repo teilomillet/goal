@@ -68,6 +68,7 @@
 - **Groq**: Llama-3, Mixtral models with high-speed inference
 - **Ollama**: Local models support (Llama-3, Mistral, etc.)
 - **Mistral**: Mistral Large, Mistral Medium
+- **MiniMax**: MiniMax-M3 and MiniMax-M2.7 through global or China endpoints
 - **OpenRouter**: Access to multiple providers through a single API with:
   - Model fallback capabilities
   - Auto-routing between models
@@ -93,6 +94,27 @@ go get github.com/teilomillet/gollm
 ```
 
 ## Quick Start
+
+### MiniMax
+
+Use `minimax` for the global chat completions endpoint or `minimax-cn` for the China endpoint. The `minimax-messages` and `minimax-messages-cn` aliases use the corresponding messages-compatible base URLs ending in `/anthropic`.
+
+| Provider | Region | Base URL |
+| --- | --- | --- |
+| `minimax` | Global | `https://api.minimax.io/v1` |
+| `minimax-cn` | China | `https://api.minimaxi.com/v1` |
+| `minimax-messages` | Global | `https://api.minimax.io/anthropic` |
+| `minimax-messages-cn` | China | `https://api.minimaxi.com/anthropic` |
+
+```go
+llm, err := gollm.NewLLM(
+    gollm.SetProvider("minimax"),
+    gollm.SetAPIKey(os.Getenv("MINIMAX_API_KEY")),
+    gollm.SetModel("MiniMax-M3"),
+)
+```
+
+Both `MiniMax-M3` and `MiniMax-M2.7` can be selected with any MiniMax provider alias.
 
 ### Basic Usage
 
