@@ -81,8 +81,14 @@ func (p *GenericProvider) Endpoint() string {
 		return p.extraEndpoint
 	}
 
-	// If endpoint contains parameters like {model}, replace them
+	// If endpoint contains parameters like {model}, replace them.
 	endpoint := p.config.Endpoint
+	if endpoint == "" && p.config.BaseURL != "" {
+		endpoint = strings.TrimRight(p.config.BaseURL, "/")
+		if p.config.RequestPath != "" {
+			endpoint += "/" + strings.TrimLeft(p.config.RequestPath, "/")
+		}
+	}
 
 	// Replace {model} placeholder if present
 	endpoint = strings.Replace(endpoint, "{model}", p.model, -1)
@@ -274,14 +280,21 @@ func (p *GenericProvider) prepareOpenAIRequest(prompt string, options map[string
 
 	// Set model
 	requestOptions["model"] = p.model
+	images, hasImages := requestOptions["images"].([]types.ContentPart)
+	delete(requestOptions, "images")
 
 	// Handle messages format
 	if _, ok := requestOptions["messages"]; !ok {
-		// Convert simple prompt to messages format
+		content := interface{}(prompt)
+		if hasImages && len(images) > 0 {
+			multimodalContent := []map[string]interface{}{{"type": "text", "text": prompt}}
+			multimodalContent = append(multimodalContent, ConvertImagesToOpenAIContent(images)...)
+			content = multimodalContent
+		}
 		requestOptions["messages"] = []map[string]interface{}{
 			{
 				"role":    "user",
-				"content": prompt,
+				"content": content,
 			},
 		}
 	}
@@ -399,14 +412,21 @@ func (p *GenericProvider) prepareAnthropicRequest(prompt string, options map[str
 
 	// Set model
 	requestOptions["model"] = p.model
+	images, hasImages := requestOptions["images"].([]types.ContentPart)
+	delete(requestOptions, "images")
 
 	// Handle messages format
 	if _, ok := requestOptions["messages"]; !ok {
-		// Convert simple prompt to messages format
+		content := interface{}(prompt)
+		if hasImages && len(images) > 0 {
+			multimodalContent := ConvertImagesToAnthropicContent(images)
+			multimodalContent = append(multimodalContent, map[string]interface{}{"type": "text", "text": prompt})
+			content = multimodalContent
+		}
 		requestOptions["messages"] = []map[string]interface{}{
 			{
 				"role":    "user",
-				"content": prompt,
+				"content": content,
 			},
 		}
 	}

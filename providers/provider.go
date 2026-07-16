@@ -112,6 +112,13 @@ type ProviderConfig struct {
 	// Endpoint is the API endpoint URL
 	Endpoint string
 
+	// BaseURL is the public API base URL used with RequestPath.
+	// Endpoint takes precedence when both fields are set.
+	BaseURL string
+
+	// RequestPath is appended to BaseURL to build the request endpoint.
+	RequestPath string
+
 	// AuthHeader is the header key used for authentication
 	AuthHeader string
 
@@ -160,6 +167,7 @@ type ProviderRegistry struct {
 //   - "cohere": Cohere's models
 //   - "deepseek": DeepSeek's models
 //   - "google-openai": Google's Gemini models using OpenAI compatible API
+//   - "minimax": MiniMax models using the global chat completions API
 //
 // Example usage:
 //
@@ -176,21 +184,25 @@ func NewProviderRegistry(providerNames ...string) *ProviderRegistry {
 
 	// Register all known providers
 	knownProviders := map[string]ProviderConstructor{
-		"openai":        NewOpenAIProvider,
-		"anthropic":     NewAnthropicProvider,
-		"groq":          NewGroqProvider,
-		"ollama":        NewOllamaProvider,
-		"mistral":       NewMistralProvider,
-		"cohere":        NewCohereProvider,
-		"deepseek":      NewDeepSeekProvider,
-		"google-openai": NewGoogleProvider,
-		"azure-openai":  NewAzureOpenAIProvider,
-		"aliyun":        NewAliyunProvider,
-		"lmstudio":      NewLMStudioProvider,
-		"openrouter":    NewOpenRouterProvider,
-		"lambda":        NewLambdaProvider,
-		"bedrock":       NewBedrockProvider,
-		"vllm":          NewVLLMProvider,
+		"openai":              NewOpenAIProvider,
+		"anthropic":           NewAnthropicProvider,
+		"groq":                NewGroqProvider,
+		"ollama":              NewOllamaProvider,
+		"mistral":             NewMistralProvider,
+		"cohere":              NewCohereProvider,
+		"deepseek":            NewDeepSeekProvider,
+		"google-openai":       NewGoogleProvider,
+		"azure-openai":        NewAzureOpenAIProvider,
+		"aliyun":              NewAliyunProvider,
+		"lmstudio":            NewLMStudioProvider,
+		"openrouter":          NewOpenRouterProvider,
+		"lambda":              NewLambdaProvider,
+		"bedrock":             NewBedrockProvider,
+		"vllm":                NewVLLMProvider,
+		"minimax":             NewMiniMaxProvider,
+		"minimax-cn":          NewMiniMaxCNProvider,
+		"minimax-messages":    NewMiniMaxMessagesProvider,
+		"minimax-messages-cn": NewMiniMaxMessagesCNProvider,
 	}
 
 	// Standard provider configurations
@@ -322,6 +334,50 @@ func NewProviderRegistry(providerNames ...string) *ProviderRegistry {
 			AuthHeader:        "", // No authentication required
 			AuthPrefix:        "",
 			RequiredHeaders:   map[string]string{"Content-Type": "application/json"},
+			SupportsSchema:    true,
+			SupportsStreaming: true,
+		},
+		"minimax": {
+			Name:              "minimax",
+			Type:              TypeOpenAI,
+			BaseURL:           "https://api.minimax.io/v1",
+			RequestPath:       "chat/completions",
+			AuthHeader:        "Authorization",
+			AuthPrefix:        "Bearer ",
+			RequiredHeaders:   map[string]string{"Content-Type": "application/json"},
+			SupportsSchema:    true,
+			SupportsStreaming: true,
+		},
+		"minimax-cn": {
+			Name:              "minimax-cn",
+			Type:              TypeOpenAI,
+			BaseURL:           "https://api.minimaxi.com/v1",
+			RequestPath:       "chat/completions",
+			AuthHeader:        "Authorization",
+			AuthPrefix:        "Bearer ",
+			RequiredHeaders:   map[string]string{"Content-Type": "application/json"},
+			SupportsSchema:    true,
+			SupportsStreaming: true,
+		},
+		"minimax-messages": {
+			Name:              "minimax-messages",
+			Type:              TypeAnthropic,
+			BaseURL:           "https://api.minimax.io/anthropic",
+			RequestPath:       "v1/messages",
+			AuthHeader:        "Authorization",
+			AuthPrefix:        "Bearer ",
+			RequiredHeaders:   map[string]string{"Content-Type": "application/json", "anthropic-version": "2023-06-01"},
+			SupportsSchema:    true,
+			SupportsStreaming: true,
+		},
+		"minimax-messages-cn": {
+			Name:              "minimax-messages-cn",
+			Type:              TypeAnthropic,
+			BaseURL:           "https://api.minimaxi.com/anthropic",
+			RequestPath:       "v1/messages",
+			AuthHeader:        "Authorization",
+			AuthPrefix:        "Bearer ",
+			RequiredHeaders:   map[string]string{"Content-Type": "application/json", "anthropic-version": "2023-06-01"},
 			SupportsSchema:    true,
 			SupportsStreaming: true,
 		},

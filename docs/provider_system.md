@@ -151,6 +151,8 @@ A `ProviderConfig` includes these fields:
 | `Name` | Identifier for the provider | `"openai"` |
 | `Type` | API format (OpenAI, Anthropic, etc.) | `providers.TypeOpenAI` |
 | `Endpoint` | API endpoint URL | `"https://api.openai.com/v1/chat/completions"` |
+| `BaseURL` | Public API base URL used with `RequestPath` | `"https://api.example.com/v1"` |
+| `RequestPath` | Request path appended to `BaseURL` | `"chat/completions"` |
 | `AuthHeader` | Header key for authentication | `"Authorization"` |
 | `AuthPrefix` | Prefix for auth token | `"Bearer "` |
 | `RequiredHeaders` | Additional required headers | `{"Content-Type": "application/json"}` |
@@ -229,4 +231,4 @@ This enhanced provider system offers several advantages:
 - **API-compatible providers**: Use `RegisterGenericProvider` with appropriate configuration
 - **Unique APIs**: Implement the `Provider` interface directly
 
-By choosing the right approach for your needs, you can minimize code while maximizing flexibility. 
+By choosing the right approach for your needs, you can minimize code while maximizing flexibility.
