@@ -4,6 +4,7 @@ package providers
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/teilomillet/gollm/config"
@@ -69,7 +70,7 @@ func (p *RequestyProvider) CompletionsEndpoint() string {
 // GenerationEndpoint returns the Requesty API endpoint for retrieving generation details.
 // This can be used to query stats like cost and token usage after a request.
 func (p *RequestyProvider) GenerationEndpoint(generationID string) string {
-	return fmt.Sprintf("https://router.requesty.ai/v1/generation?id=%s", generationID)
+	return fmt.Sprintf("https://router.requesty.ai/v1/generation?id=%s", url.QueryEscape(generationID))
 }
 
 // SetOption sets a model-specific option for the Requesty provider.
