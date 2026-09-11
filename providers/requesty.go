@@ -480,9 +480,12 @@ func (p *RequestyProvider) PrepareStreamRequest(prompt string, options map[strin
 }
 
 // ParseStreamResponse processes a chunk from a streaming Requesty response.
+// The SSE decoder has already stripped the "data:" prefix, but it leaves a
+// trailing newline on each event, so compare against the trimmed payload.
 func (p *RequestyProvider) ParseStreamResponse(chunk []byte) (string, error) {
 	// Skip empty chunks and "[DONE]" markers
-	if len(chunk) == 0 || string(chunk) == "[DONE]" {
+	trimmed := strings.TrimSpace(string(chunk))
+	if trimmed == "" || trimmed == "[DONE]" {
 		return "", nil
 	}
 
