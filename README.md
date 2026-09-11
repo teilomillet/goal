@@ -47,7 +47,7 @@
 
 ## Key Features
 
-- **Unified API for Multiple LLM Providers:** Interact seamlessly with various providers, including OpenAI, Anthropic, Groq, Ollama, and OpenRouter. Easily switch between models like GPT-4, Claude, and Llama-3.1.
+- **Unified API for Multiple LLM Providers:** Interact seamlessly with various providers, including OpenAI, Anthropic, Groq, Ollama, OpenRouter, and Requesty. Easily switch between models like GPT-4, Claude, and Llama-3.1.
 - **Easy Provider and Model Switching:** Configure preferred providers and models with simple options.
 - **Flexible Configuration Options:** Customize using environment variables, code-based configuration, or configuration files.
 - **Advanced Prompt Engineering:** Craft sophisticated instructions to guide your AI's responses effectively.
